@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -18,6 +19,7 @@ type Server struct {
 	URL         string
 	nameservers map[string][]string
 	dnsRecords  map[string][]porkbun.DNSRecord
+	glueRecords map[string]map[string][]string
 }
 
 func New() *Server {
@@ -30,6 +32,7 @@ func New() *Server {
 		URL:         server.URL,
 		nameservers: make(map[string][]string),
 		dnsRecords:  make(map[string][]porkbun.DNSRecord),
+		glueRecords: make(map[string]map[string][]string),
 	}
 
 	m.addPorkbunHandlers()
@@ -46,6 +49,10 @@ func (m *Server) SetNameservers(domain string, nameservers []string) {
 
 func (m *Server) SetDNSRecords(domain string, records []porkbun.DNSRecord) {
 	m.dnsRecords[domain] = records
+}
+
+func (m *Server) SetGlueRecords(domain string, records map[string][]string) {
+	m.glueRecords[domain] = records
 }
 
 func (m *Server) addPorkbunHandlers() {
@@ -208,5 +215,112 @@ func (m *Server) addPorkbunHandlers() {
 		_, _ = rw.Write([]byte(`{
 			"status": "SUCCESS"
 		}`))
+	})
+
+	// Glue Records Handlers
+
+	m.mux.HandleFunc("/domain/createGlue/{domain}/{subdomain}", func(rw http.ResponseWriter, req *http.Request) {
+		domain := req.PathValue("domain")
+		subdomain := req.PathValue("subdomain")
+
+		rw.Header().Set("Content-Type", "application/json")
+
+		body, _ := io.ReadAll(req.Body)
+		var b struct {
+			IPs []string `json:"ips"`
+		}
+		_ = json.Unmarshal(body, &b)
+
+		if _, ok := m.glueRecords[domain]; !ok {
+			m.glueRecords[domain] = make(map[string][]string)
+		}
+		m.glueRecords[domain][subdomain] = b.IPs
+
+		_, _ = rw.Write([]byte(`{
+			"status": "SUCCESS"
+		}`))
+	})
+
+	m.mux.HandleFunc("/domain/updateGlue/{domain}/{subdomain}", func(rw http.ResponseWriter, req *http.Request) {
+		domain := req.PathValue("domain")
+		subdomain := req.PathValue("subdomain")
+
+		rw.Header().Set("Content-Type", "application/json")
+
+		// In real world, verify existence. Here we just upsert.
+		if _, ok := m.glueRecords[domain]; !ok {
+			m.glueRecords[domain] = make(map[string][]string)
+		}
+
+		body, _ := io.ReadAll(req.Body)
+		var b struct {
+			IPs []string `json:"ips"`
+		}
+		_ = json.Unmarshal(body, &b)
+
+		m.glueRecords[domain][subdomain] = b.IPs
+
+		_, _ = rw.Write([]byte(`{
+			"status": "SUCCESS"
+		}`))
+	})
+
+	m.mux.HandleFunc("/domain/deleteGlue/{domain}/{subdomain}", func(rw http.ResponseWriter, req *http.Request) {
+		domain := req.PathValue("domain")
+		subdomain := req.PathValue("subdomain")
+
+		rw.Header().Set("Content-Type", "application/json")
+
+		if sub, ok := m.glueRecords[domain]; ok {
+			delete(sub, subdomain)
+		}
+
+		_, _ = rw.Write([]byte(`{
+			"status": "SUCCESS"
+		}`))
+	})
+
+	m.mux.HandleFunc("/domain/getGlue/{domain}", func(rw http.ResponseWriter, req *http.Request) {
+		domain := req.PathValue("domain")
+
+		rw.Header().Set("Content-Type", "application/json")
+
+		// Return format:
+		// "hosts": [ [ "ns1.domain.com", { "v4": [...], "v6": [...] } ] ]
+
+		var hosts [][]interface{}
+
+		if records, ok := m.glueRecords[domain]; ok {
+			for sub, ips := range records {
+				v4 := []string{}
+				v6 := []string{}
+				for _, ip := range ips {
+					addr := net.ParseIP(ip)
+					if addr.To4() != nil {
+						v4 = append(v4, ip)
+					} else {
+						v6 = append(v6, ip)
+					}
+				}
+
+				hostObj := map[string][]string{
+					"v4": v4,
+					"v6": v6,
+				}
+				fullHost := fmt.Sprintf("%s.%s", sub, domain)
+				hosts = append(hosts, []interface{}{fullHost, hostObj})
+			}
+		}
+
+		resp := struct {
+			Status string          `json:"status"`
+			Hosts  [][]interface{} `json:"hosts"`
+		}{
+			Status: "SUCCESS",
+			Hosts:  hosts,
+		}
+
+		body, _ := json.Marshal(resp)
+		_, _ = rw.Write(body)
 	})
 }
