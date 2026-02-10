@@ -10,7 +10,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 
-	porkbun "github.com/kyswtn/terraform-provider-porkbun/internal/client"
+	porkbun "github.com/vitvio/terraform-provider-porkbun/internal/client"
 )
 
 type Server struct {

@@ -16,7 +16,7 @@ To use this provider, you need an API Key and Secret Key from your Porkbun accou
 terraform {
   required_providers {
     porkbun = {
-      source = "kyswtn/porkbun"
+      source = "vitvio/porkbun"
     }
   }
 }
