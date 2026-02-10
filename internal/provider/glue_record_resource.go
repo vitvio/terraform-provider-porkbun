@@ -46,7 +46,7 @@ func (r *GlueRecordResource) Schema(ctx context.Context, req resource.SchemaRequ
 				MarkdownDescription: "The subdomain of the glue record (e.g., 'ns1').",
 				Required:            true,
 			},
-			"ips": schema.ListAttribute{
+			"ips": schema.SetAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "The IP addresses for the glue record.",
 				Required:            true,
@@ -196,6 +196,10 @@ func (r *GlueRecordResource) ImportState(ctx context.Context, req resource.Impor
 		return
 	}
 
+	// Manually set attributes from the ID parts because the Read method relies on
+	// "domain" and "subdomain" being present in the state to function correctly.
+	// Standard ImportStatePassthroughID would not populate these fields effectively
+	// for the Read operation to follow.
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("domain"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("subdomain"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)

@@ -29,7 +29,7 @@ resource "porkbun_glue_record" "ns1" {
 ### Required
 
 - `domain` (String) The FQDN of the domain.
-- `ips` (List of String) The IP addresses for the glue record.
+- `ips` (Set of String) The IP addresses for the glue record.
 - `subdomain` (String) The subdomain of the glue record (e.g., 'ns1').
 
 ### Read-Only
