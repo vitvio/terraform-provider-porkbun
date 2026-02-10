@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	"github.com/kyswtn/terraform-provider-porkbun/internal/mockbun"
+	"github.com/vitvio/terraform-provider-porkbun/internal/mockbun"
 )
 
 // testAccProtoV6ProviderFactories are used to instantiate a provider during

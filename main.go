@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/kyswtn/terraform-provider-porkbun/internal/provider"
+	"github.com/vitvio/terraform-provider-porkbun/internal/provider"
 )
 
 //go:generate terraform fmt -recursive ./examples/
@@ -28,7 +28,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "registry.terraform.io/kyswtn/porkbun",
+		Address: "registry.terraform.io/vitvio/porkbun",
 		Debug:   debug,
 	}
 

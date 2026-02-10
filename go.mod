@@ -1,4 +1,4 @@
-module github.com/kyswtn/terraform-provider-porkbun
+module github.com/vitvio/terraform-provider-porkbun
 
 go 1.22.1
 

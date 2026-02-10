@@ -15,8 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	porkbun "github.com/kyswtn/terraform-provider-porkbun/internal/client"
-	"github.com/kyswtn/terraform-provider-porkbun/internal/consts"
+	porkbun "github.com/vitvio/terraform-provider-porkbun/internal/client"
+	"github.com/vitvio/terraform-provider-porkbun/internal/consts"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
