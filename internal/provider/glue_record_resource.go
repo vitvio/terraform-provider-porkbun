@@ -119,13 +119,13 @@ func (r *GlueRecordResource) Read(ctx context.Context, req resource.ReadRequest,
 	// Find the specific record
 	found := false
 	expectedHost := fmt.Sprintf("%s.%s", data.Subdomain.ValueString(), data.Domain.ValueString())
-	
+
 	for _, rec := range records {
 		// rec.Subdomain from GetGlueRecords is actually the full hostname (e.g. ns1.example.com)
 		// We can check exact match or if it ends with domain?
 		// The API implementation I wrote: `records = append(records, GlueRecord{ ..., Subdomain: hostName })`
 		// where hostName comes from the [0] element of the array.
-		
+
 		if rec.Subdomain == expectedHost {
 			found = true
 			tfIPs := make([]types.String, len(rec.IPs))
