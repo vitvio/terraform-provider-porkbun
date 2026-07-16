@@ -20,6 +20,8 @@ type Server struct {
 	nameservers map[string][]string
 	dnsRecords  map[string][]porkbun.DNSRecord
 	glueRecords map[string]map[string][]string
+	// dnssecRecords maps domain -> keyTag -> record.
+	dnssecRecords map[string]map[string]porkbun.DNSSECRecord
 }
 
 func New() *Server {
@@ -27,12 +29,13 @@ func New() *Server {
 	server := httptest.NewServer(mux)
 
 	m := &Server{
-		mux:         mux,
-		server:      server,
-		URL:         server.URL,
-		nameservers: make(map[string][]string),
-		dnsRecords:  make(map[string][]porkbun.DNSRecord),
-		glueRecords: make(map[string]map[string][]string),
+		mux:           mux,
+		server:        server,
+		URL:           server.URL,
+		nameservers:   make(map[string][]string),
+		dnsRecords:    make(map[string][]porkbun.DNSRecord),
+		glueRecords:   make(map[string]map[string][]string),
+		dnssecRecords: make(map[string]map[string]porkbun.DNSSECRecord),
 	}
 
 	m.addPorkbunHandlers()
@@ -53,6 +56,10 @@ func (m *Server) SetDNSRecords(domain string, records []porkbun.DNSRecord) {
 
 func (m *Server) SetGlueRecords(domain string, records map[string][]string) {
 	m.glueRecords[domain] = records
+}
+
+func (m *Server) SetDNSSECRecords(domain string, records map[string]porkbun.DNSSECRecord) {
+	m.dnssecRecords[domain] = records
 }
 
 func (m *Server) addPorkbunHandlers() {
@@ -322,5 +329,63 @@ func (m *Server) addPorkbunHandlers() {
 
 		body, _ := json.Marshal(resp)
 		_, _ = rw.Write(body)
+	})
+
+	// DNSSEC Records Handlers
+
+	m.mux.HandleFunc("/dns/createDnssecRecord/{domain}", func(rw http.ResponseWriter, req *http.Request) {
+		domain := req.PathValue("domain")
+
+		rw.Header().Set("Content-Type", "application/json")
+
+		body, _ := io.ReadAll(req.Body)
+		var b porkbun.DNSSECRecord
+		_ = json.Unmarshal(body, &b)
+
+		if _, ok := m.dnssecRecords[domain]; !ok {
+			m.dnssecRecords[domain] = make(map[string]porkbun.DNSSECRecord)
+		}
+		m.dnssecRecords[domain][b.KeyTag] = b
+
+		_, _ = rw.Write([]byte(`{
+			"status": "SUCCESS"
+		}`))
+	})
+
+	m.mux.HandleFunc("/dns/getDnssecRecords/{domain}", func(rw http.ResponseWriter, req *http.Request) {
+		domain := req.PathValue("domain")
+
+		rw.Header().Set("Content-Type", "application/json")
+
+		records := m.dnssecRecords[domain]
+		if len(records) == 0 {
+			// Porkbun serializes an empty record set as a JSON array.
+			_, _ = rw.Write([]byte(`{
+				"status": "SUCCESS",
+				"records": []
+			}`))
+			return
+		}
+
+		rs, _ := json.Marshal(records)
+		_, _ = rw.Write([]byte(fmt.Sprintf(`{
+			"status": "SUCCESS",
+			"records": %s
+		}`, rs)))
+	})
+
+	m.mux.HandleFunc("/dns/deleteDnssecRecord/{domain}/{keyTag}", func(rw http.ResponseWriter, req *http.Request) {
+		domain := req.PathValue("domain")
+		keyTag := req.PathValue("keyTag")
+
+		rw.Header().Set("Content-Type", "application/json")
+
+		if records, ok := m.dnssecRecords[domain]; ok {
+			delete(records, keyTag)
+		}
+
+		_, _ = rw.Write([]byte(`{
+			"status": "SUCCESS"
+		}`))
 	})
 }
