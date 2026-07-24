@@ -1,16 +1,16 @@
+version: "2"
+
 issues:
-  max-per-linter: 0
+  max-issues-per-linter: 0
   max-same-issues: 0
 
 linters:
-  disable-all: true
+  default: none
   enable:
     - durationcheck
     - errcheck
     - forcetypeassert
     - godot
-    - gofmt
-    - gosimple
     - ineffassign
     - makezero
     - misspell
@@ -21,10 +21,20 @@ linters:
     - unparam
     - unused
     - govet
+  settings:
+    staticcheck:
+      # Match the v1 behavior of the staticcheck + gosimple linters,
+      # which excluded the stylecheck (ST) and quickfix (QF) checks.
+      checks:
+        - all
+        - -ST*
+        - -QF*
+    lll:
+      # Max line length, lines longer will be reported.
+      # '\t' is counted as 1 character by default, and can be changed with the tab-width option.
+      line-length: 160
+      tab-width: 4
 
-linters-settings:
-  lll:
-    # Max line length, lines longer will be reported.
-    # '\t' is counted as 1 character by default, and can be changed with the tab-width option.
-    line-length: 160
-    tab-width: 4
+formatters:
+  enable:
+    - gofmt
