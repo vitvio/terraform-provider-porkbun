@@ -149,13 +149,19 @@ func (p *PorkbunProvider) Configure(ctx context.Context, req provider.ConfigureR
 		customBaseURL = config.CustomBaseURL.ValueString()
 	}
 
-	var maxRetries int64 = 4
+	var maxRetries int = 4
 	if config.MaxRetries.IsNull() {
 		if value, ok := os.LookupEnv("PORKBUN_MAX_RETRIES"); ok {
-			maxRetries, _ = strconv.ParseInt(value, 10, 64)
+			parsed, err := strconv.Atoi(value)
+			if err == nil && parsed >= 0 {
+				maxRetries = parsed
+			}
 		}
 	} else {
-		maxRetries = config.MaxRetries.ValueInt64()
+		cfgMaxRetries := config.MaxRetries.ValueInt64()
+		if cfgMaxRetries >= 0 {
+			maxRetries = int(cfgMaxRetries)
+		}
 	}
 
 	// Validate that required values are populated.
@@ -207,7 +213,7 @@ func (p *PorkbunProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 	// Replace client's `httpClient` with `retryablehttp.Client`.
 	retryClient := retryablehttp.NewClient()
-	retryClient.RetryMax = int(maxRetries)
+	retryClient.RetryMax = maxRetries
 	client.SetCustomHTTPClient(retryClient.StandardClient())
 
 	resp.ResourceData = &client
